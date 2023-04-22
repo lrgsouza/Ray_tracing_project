@@ -1,11 +1,10 @@
 import numpy as np
 import matplotlib.pyplot as plt
-
-
 import time
+
+
 # marca o tempo de início
 inicio = time.time()
-
 
 def normalize(vector):
     return vector / np.linalg.norm(vector)
@@ -126,10 +125,9 @@ for i, y in enumerate(np.linspace(screen[1], screen[3], height)):
     print("%d/%d" % (i + 1, height))
 
 plt.imsave('image2.png', image)
+
 # marca o tempo de fim
 fim = time.time()
-
 # calcula o tempo total de execução
 tempo_total = fim - inicio
-
 print(f"O tempo total foi de: {tempo_total} segundos")
