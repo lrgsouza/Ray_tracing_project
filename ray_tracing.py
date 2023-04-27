@@ -1,3 +1,4 @@
+import os
 import numpy as np
 import matplotlib.pyplot as plt
 import time
@@ -37,18 +38,117 @@ def nearest_intersected_object(objects, ray_origin, ray_direction):
             nearest_object = objects[index]
     return nearest_object, min_distance
 
+
+def frame_framerender(width, height, max_depth, camera, screen, objects, image, frame_rate):
+
+    ini_rng = int(0 - (frame_rate/2))
+    end_rng = int(0 + (frame_rate/2) + 1)
+    img_number = 0
+    #loop para renderizar frame com nova posição do sol(luz)
+    for position in range(ini_rng, end_rng, 1):
+        
+        #define x e y da luz
+        y = 5
+        x = position
+
+        light = {'position': np.array([x, y, 5]), 'ambient': np.array(
+            [1, 1, 1]), 'diffuse': np.array([1, 1, 1]), 'specular': np.array([1, 1, 1])}
+
+        # loop principal para gerar render
+        for i, y in enumerate(np.linspace(screen[1], screen[3], height)):
+            for j, x in enumerate(np.linspace(screen[0], screen[2], width)):
+                # screen is on origin
+                pixel = np.array([x, y, 0])
+                origin = camera
+                direction = normalize(pixel - origin)
+
+                color = np.zeros((3))
+                reflection = 1
+
+                for k in range(max_depth):
+                    # check for intersections
+                    nearest_object, min_distance = nearest_intersected_object(
+                        objects, origin, direction)
+                    if nearest_object is None:
+                        break
+
+                    intersection = origin + min_distance * direction
+                    normal_to_surface = normalize(
+                        intersection - nearest_object['center'])
+                    shifted_point = intersection + 1e-5 * normal_to_surface
+                    intersection_to_light = normalize(
+                        light['position'] - shifted_point)
+
+                    _, min_distance = nearest_intersected_object(
+                        objects, shifted_point, intersection_to_light)
+                    intersection_to_light_distance = np.linalg.norm(
+                        light['position'] - intersection)
+                    is_shadowed = min_distance < intersection_to_light_distance
+
+                    if is_shadowed:
+                        break
+
+                    illumination = np.zeros((3))
+
+                    # ambiant
+                    illumination += nearest_object['ambient'] * light['ambient']
+
+                    # diffuse
+                    illumination += nearest_object['diffuse'] * light['diffuse'] * \
+                        np.dot(intersection_to_light, normal_to_surface)
+
+                    # specular
+                    intersection_to_camera = normalize(camera - intersection)
+                    H = normalize(intersection_to_light + intersection_to_camera)
+                    illumination += nearest_object['specular'] * light['specular'] * np.dot(
+                        normal_to_surface, H) ** (nearest_object['shininess'] / 4)
+
+                    # reflection
+                    color += reflection * illumination
+                    reflection *= nearest_object['reflection']
+
+                    origin = shifted_point
+                    direction = reflected(direction, normal_to_surface)
+
+                image[i, j] = np.clip(color, 0, 1)
+            print("%d/%d" % (i + 1, height))
+            
+        plt.imsave(F'frames/image{img_number}.png', image)
+        img_number = img_number + 1
+        print(f'Frame: {img_number}/{frame_rate}')
+
+
+def generate_gif():
+
+    import os
+    from PIL import Image
+    # caminho para a pasta contendo os arquivos
+    caminho_pasta = "./frames"
+
+    # lista os arquivos na pasta e cria uma lista com os nomes
+    arquivos = os.listdir(caminho_pasta)
+
+    # abra cada arquivo PNG
+    imagens = [Image.open(f'./frames/{nome_arquivo}')
+               for nome_arquivo in arquivos]
+
+    # salve as imagens em um arquivo GIF
+    imagens[0].save('animação.gif',
+                    save_all=True,
+                    append_images=imagens[1:],
+                    duration=100,
+                    loop=0)
+
+
 #define largura e altura da cena
-width = 1920
-height = 1080
+width = 300
+height = 200
 max_depth = 3
 
 #define posição da camera
 camera = np.array([0, 0, 1])
 ratio = float(width) / height
 screen = (-1, 1 / ratio, 1, -1 / ratio)  # left, top, right, bottom
-
-light = {'position': np.array([-5, -5, 5]), 'ambient': np.array(
-    [1, 1, 1]), 'diffuse': np.array([1, 1, 1]), 'specular': np.array([1, 1, 1])}
 
 #definindo as esferas da cena
 objects = [
@@ -65,66 +165,16 @@ objects = [
 # cria uma imagem de tamanho height x width com 3 páginas
 image = np.zeros((height, width, 3))
 
-#loop principal para gerar render
-for i, y in enumerate(np.linspace(screen[1], screen[3], height)):
-    for j, x in enumerate(np.linspace(screen[0], screen[2], width)):
-        # screen is on origin
-        pixel = np.array([x, y, 0])
-        origin = camera
-        direction = normalize(pixel - origin)
+# DEFINE QUANTOS FRAMES QUEREMOS RENDERIZAR
+frame_rate = 2
 
-        color = np.zeros((3))
-        reflection = 1
+# CHAMA FUNÇÃO PRINCIPAL
+frame_framerender(width, height, max_depth, camera,
+                  screen, objects, image, frame_rate)
 
-        for k in range(max_depth):
-            # check for intersections
-            nearest_object, min_distance = nearest_intersected_object(
-                objects, origin, direction)
-            if nearest_object is None:
-                break
 
-            intersection = origin + min_distance * direction
-            normal_to_surface = normalize(
-                intersection - nearest_object['center'])
-            shifted_point = intersection + 1e-5 * normal_to_surface
-            intersection_to_light = normalize(
-                light['position'] - shifted_point)
-
-            _, min_distance = nearest_intersected_object(
-                objects, shifted_point, intersection_to_light)
-            intersection_to_light_distance = np.linalg.norm(
-                light['position'] - intersection)
-            is_shadowed = min_distance < intersection_to_light_distance
-
-            if is_shadowed:
-                break
-
-            illumination = np.zeros((3))
-
-            # ambiant
-            illumination += nearest_object['ambient'] * light['ambient']
-
-            # diffuse
-            illumination += nearest_object['diffuse'] * light['diffuse'] * \
-                np.dot(intersection_to_light, normal_to_surface)
-
-            # specular
-            intersection_to_camera = normalize(camera - intersection)
-            H = normalize(intersection_to_light + intersection_to_camera)
-            illumination += nearest_object['specular'] * light['specular'] * np.dot(
-                normal_to_surface, H) ** (nearest_object['shininess'] / 4)
-
-            # reflection
-            color += reflection * illumination
-            reflection *= nearest_object['reflection']
-
-            origin = shifted_point
-            direction = reflected(direction, normal_to_surface)
-
-        image[i, j] = np.clip(color, 0, 1)
-    print("%d/%d" % (i + 1, height))
-
-plt.imsave('image2.png', image)
+#gerando GIF animado
+generate_gif()
 
 # marca o tempo de fim
 fim = time.time()
