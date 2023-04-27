@@ -2,6 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import time
 
+from tqdm import tqdm
 
 # marca o tempo de início
 inicio = time.time()
@@ -24,8 +25,6 @@ def sphere_intersect(center, radius, ray_origin, ray_direction):
         if t1 > 0 and t2 > 0:
             return min(t1, t2)
     return None
-
-
 def nearest_intersected_object(objects, ray_origin, ray_direction):
     distances = [sphere_intersect(
         obj['center'], obj['radius'], ray_origin, ray_direction) for obj in objects]
@@ -38,8 +37,8 @@ def nearest_intersected_object(objects, ray_origin, ray_direction):
     return nearest_object, min_distance
 
 #define largura e altura da cena
-width = 1920
-height = 1080
+width = 300
+height = 200
 max_depth = 3
 
 #define posição da camera
@@ -47,7 +46,7 @@ camera = np.array([0, 0, 1])
 ratio = float(width) / height
 screen = (-1, 1 / ratio, 1, -1 / ratio)  # left, top, right, bottom
 
-light = {'position': np.array([-5, -5, 5]), 'ambient': np.array(
+light = {'position': np.array([5, 5, 5]), 'ambient': np.array(
     [1, 1, 1]), 'diffuse': np.array([1, 1, 1]), 'specular': np.array([1, 1, 1])}
 
 #definindo as esferas da cena
@@ -65,66 +64,70 @@ objects = [
 # cria uma imagem de tamanho height x width com 3 páginas
 image = np.zeros((height, width, 3))
 
-#loop principal para gerar render
-for i, y in enumerate(np.linspace(screen[1], screen[3], height)):
-    for j, x in enumerate(np.linspace(screen[0], screen[2], width)):
-        # screen is on origin
-        pixel = np.array([x, y, 0])
-        origin = camera
-        direction = normalize(pixel - origin)
+for count in range(1, 12):
+    light = {'position': np.array([count-6, 5-((count-4)*(count-4))/2, 5]), 'ambient': np.array(
+    [1, 1, 1]), 'diffuse': np.array([1, 1, 1]), 'specular': np.array([1, 1, 1])}
 
-        color = np.zeros((3))
-        reflection = 1
+    #loop principal para gerar render
+    for i, y in tqdm(enumerate(np.linspace(screen[1], screen[3], height)), desc ="Renderizando frame "+str(count)+": "):
+        for j, x in enumerate(np.linspace(screen[0], screen[2], width)):
+            # screen is on origin
+            pixel = np.array([x, y, 0])
+            origin = camera
+            direction = normalize(pixel - origin)
 
-        for k in range(max_depth):
-            # check for intersections
-            nearest_object, min_distance = nearest_intersected_object(
-                objects, origin, direction)
-            if nearest_object is None:
-                break
+            color = np.zeros((3))
+            reflection = 1
 
-            intersection = origin + min_distance * direction
-            normal_to_surface = normalize(
-                intersection - nearest_object['center'])
-            shifted_point = intersection + 1e-5 * normal_to_surface
-            intersection_to_light = normalize(
-                light['position'] - shifted_point)
+            for k in range(max_depth):
+                # check for intersections
+                nearest_object, min_distance = nearest_intersected_object(
+                    objects, origin, direction)
+                if nearest_object is None:
+                    break
 
-            _, min_distance = nearest_intersected_object(
-                objects, shifted_point, intersection_to_light)
-            intersection_to_light_distance = np.linalg.norm(
-                light['position'] - intersection)
-            is_shadowed = min_distance < intersection_to_light_distance
+                intersection = origin + min_distance * direction
+                normal_to_surface = normalize(
+                    intersection - nearest_object['center'])
+                shifted_point = intersection + 1e-5 * normal_to_surface
+                intersection_to_light = normalize(
+                    light['position'] - shifted_point)
 
-            if is_shadowed:
-                break
+                _, min_distance = nearest_intersected_object(
+                    objects, shifted_point, intersection_to_light)
+                intersection_to_light_distance = np.linalg.norm(
+                    light['position'] - intersection)
+                is_shadowed = min_distance < intersection_to_light_distance
 
-            illumination = np.zeros((3))
+                if is_shadowed:
+                    break
 
-            # ambiant
-            illumination += nearest_object['ambient'] * light['ambient']
+                illumination = np.zeros((3))
 
-            # diffuse
-            illumination += nearest_object['diffuse'] * light['diffuse'] * \
-                np.dot(intersection_to_light, normal_to_surface)
+                # ambiant
+                illumination += nearest_object['ambient'] * light['ambient']
 
-            # specular
-            intersection_to_camera = normalize(camera - intersection)
-            H = normalize(intersection_to_light + intersection_to_camera)
-            illumination += nearest_object['specular'] * light['specular'] * np.dot(
-                normal_to_surface, H) ** (nearest_object['shininess'] / 4)
+                # diffuse
+                illumination += nearest_object['diffuse'] * light['diffuse'] * \
+                    np.dot(intersection_to_light, normal_to_surface)
 
-            # reflection
-            color += reflection * illumination
-            reflection *= nearest_object['reflection']
+                # specular
+                intersection_to_camera = normalize(camera - intersection)
+                H = normalize(intersection_to_light + intersection_to_camera)
+                illumination += nearest_object['specular'] * light['specular'] * np.dot(
+                    normal_to_surface, H) ** (nearest_object['shininess'] / 4)
 
-            origin = shifted_point
-            direction = reflected(direction, normal_to_surface)
+                # reflection
+                color += reflection * illumination
+                reflection *= nearest_object['reflection']
 
-        image[i, j] = np.clip(color, 0, 1)
-    print("%d/%d" % (i + 1, height))
+                origin = shifted_point
+                direction = reflected(direction, normal_to_surface)
 
-plt.imsave('image2.png', image)
+            image[i, j] = np.clip(color, 0, 1)
+
+    plt.imsave('image'+str(count+1)+'.png', image)
+    print("Salvando a imagem 'image"+str(count)+".png'\n")
 
 # marca o tempo de fim
 fim = time.time()
