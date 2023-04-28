@@ -19,5 +19,9 @@ python ray_tracing.py
 
 - A partir destes frames uma animação em gif será adicionada ao diretório ./gifs
 
+## Colaboradores:
+- Lucas Ribeiro Garcia de Souza
+- Airton Gabriel de Carvalho
+
 ## Referência:
 ### https://medium.com/swlh/ray-tracing-from-scratch-in-python-41670e6a96f9
