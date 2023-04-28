@@ -1,10 +1,9 @@
 import numpy as np
 import matplotlib.pyplot as plt
-import time
 import os
 from PIL import Image
 
-def generate_gif():
+def generate_gif(gif_name):
 
     # caminho para a pasta contendo os arquivos
     caminho_pasta = "./frames"
@@ -17,7 +16,7 @@ def generate_gif():
                for nome_arquivo in arquivos]
 
     # salve as imagens em um arquivo GIF
-    imagens[0].save('animacao.gif',
+    imagens[0].save(gif_name,
                     save_all=True,
                     append_images=imagens[1:],
                     duration=200,
@@ -62,5 +61,3 @@ def clean_path(path):
     for arquivo in arquivos:
         caminho_arquivo = os.path.join(path, arquivo)
         os.remove(caminho_arquivo)
-
-generate_gif()

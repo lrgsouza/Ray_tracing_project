@@ -9,20 +9,14 @@ from tqdm import tqdm
 # marca o tempo de início
 inicio = time.time()
 
-def frame_framerender(width, height, max_depth, camera, screen, objects, image, frame_rate):
-
-    ini_rng = int(0 - (frame_rate/2))
-    end_rng = int(0 + (frame_rate/2) + 1)
+def frame_framerender(width, height, max_depth, camera, screen, objects, image):
     img_number = 0
     
     x_arr = [-5, -4.5, -4, -3, -2, -1, 0, 1, 2, 3, 4, 5, 4.5, 4, 3, 2, 1, 0, -1, -2, -3, -4, -4.5]
     z_arr = [0, 1.5, 3, 4, 4.5, 5, 5, 5, 4.5, 4, 3, 1.5, 0, -3, -4, -4.5, -5, -5, -5, -4.5, -4, -3, -1.5]
 
-    ini_rng = 0
-    end_rng = len(x_arr)
-
     #loop para renderizar frame com nova posição do sol(luz)
-    for position in range(ini_rng, end_rng, 1):
+    for position in range(0, len(x_arr), 1):
         
         #define x e y da luz
         y = 3
@@ -101,8 +95,8 @@ def frame_framerender(width, height, max_depth, camera, screen, objects, image, 
 
 
 #define largura e altura da cena
-width = 150
-height = 100
+width = 90
+height = 60
 max_depth = 3
 
 #define posição da camera
@@ -129,18 +123,17 @@ objects = [
 # cria uma imagem de tamanho height x width com 3 páginas
 image = np.zeros((height, width, 3))
 
-# DEFINE QUANTOS FRAMES QUEREMOS RENDERIZAR
-frame_rate = 19
-
+# limpa todos os arquivos da pasta "frames"
 clean_path("frames")
 
 # CHAMA FUNÇÃO PRINCIPAL
 frame_framerender(width, height, max_depth, camera,
-                  screen, objects, image, frame_rate)
+                  screen, objects, image)
 
 
 #gerando GIF animado
-generate_gif()
+gif_name = f"./gifs/circle_animation_{width}x{height}.gif"
+generate_gif(gif_name)
 
 # marca o tempo de fim
 fim = time.time()
