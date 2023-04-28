@@ -3,6 +3,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 import time
 
+from tqdm import tqdm
+
 
 # marca o tempo de início
 inicio = time.time()
@@ -55,7 +57,7 @@ def frame_framerender(width, height, max_depth, camera, screen, objects, image, 
             [1, 1, 1]), 'diffuse': np.array([1, 1, 1]), 'specular': np.array([1, 1, 1])}
 
         # loop principal para gerar render
-        for i, y in enumerate(np.linspace(screen[1], screen[3], height)):
+        for i, y in enumerate(tqdm(np.linspace(screen[1], screen[3], height), colour = 'blue', desc ="Renderizando frame "+str(img_number+1)+": ")):
             for j, x in enumerate(np.linspace(screen[0], screen[2], width)):
                 # screen is on origin
                 pixel = np.array([x, y, 0])
@@ -111,11 +113,11 @@ def frame_framerender(width, height, max_depth, camera, screen, objects, image, 
                     direction = reflected(direction, normal_to_surface)
 
                 image[i, j] = np.clip(color, 0, 1)
-            print("%d/%d" % (i + 1, height))
             
         plt.imsave(F'frames/image{img_number}.png', image)
+        print(F'Imagem gerada: image{img_number}.png\n')
+
         img_number = img_number + 1
-        print(f'Frame: {img_number}/{frame_rate}')
 
 
 def generate_gif():
@@ -133,7 +135,7 @@ def generate_gif():
                for nome_arquivo in arquivos]
 
     # salve as imagens em um arquivo GIF
-    imagens[0].save('animação.gif',
+    imagens[0].save('animacao.gif',
                     save_all=True,
                     append_images=imagens[1:],
                     duration=100,
@@ -141,8 +143,8 @@ def generate_gif():
 
 
 #define largura e altura da cena
-width = 300
-height = 200
+width = 900
+height = 600
 max_depth = 3
 
 #define posição da camera
@@ -166,7 +168,7 @@ objects = [
 image = np.zeros((height, width, 3))
 
 # DEFINE QUANTOS FRAMES QUEREMOS RENDERIZAR
-frame_rate = 2
+frame_rate = 10
 
 # CHAMA FUNÇÃO PRINCIPAL
 frame_framerender(width, height, max_depth, camera,
@@ -180,4 +182,7 @@ generate_gif()
 fim = time.time()
 # calcula o tempo total de execução
 tempo_total = fim - inicio
-print(f"O tempo total foi de: {tempo_total} segundos")
+if(tempo_total>300):
+    print(f"O tempo total foi de: {tempo_total/60} minutos")
+else:
+    print(f"O tempo total foi de: {tempo_total} segundos")
